@@ -2,6 +2,7 @@ package multilogger
 
 import (
 	"log"
+	"runtime"
 	"time"
 
 	"github.com/skybon/mgoHelpers"
@@ -90,6 +91,10 @@ func (c *LogCollection) addLoop() {
 	}
 }
 
+func DestroyLogCollection(obj *LogCollection) {
+	obj.Close()
+}
+
 func MakeLogCollection(modes LoggingModes, mongoInstance *mgoHelpers.MongoDb) *LogCollection {
 	var mongoStorage mgoHelpers.MongoStorageInfo
 	if mongoInstance == nil {
@@ -99,8 +104,9 @@ func MakeLogCollection(modes LoggingModes, mongoInstance *mgoHelpers.MongoDb) *L
 		mongoStorage.Collection = "Logs"
 	}
 
-	c := LogCollection{LogCollectionMongo{mongo: mongoStorage}, LogCollectionBase{activeModes: modes, data: []LogMessage{}, inputChan: make(chan LogMessage)}}
+	c := &LogCollection{LogCollectionMongo{mongo: mongoStorage}, LogCollectionBase{activeModes: modes, data: []LogMessage{}, inputChan: make(chan LogMessage)}}
 	go c.addLoop()
+	runtime.SetFinalizer(c, DestroyLogCollection)
 
-	return &c
+	return c
 }
